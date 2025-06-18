@@ -1,46 +1,60 @@
-import { Injectable } from "@nestjs/common";
-import { DayAvailability, Slot } from "../interfaces/calendar.interfaces";
-
-const generateMockDays = (month: string, year: string): DayAvailability[] => {
-  const days: DayAvailability[] = [];
-  const totalDays = new Date(Number(year), Number(month), 0).getDate();
-  for (let i = 1; i <= totalDays; i++) {
-    const day = `${year}-${month.padStart(2, '0')}-${i.toString().padStart(2, '0')}`;
-    days.push({ date: day, available: i % 2 === 0 }); // alternar disponibilidad
-  }
-  return days;
-};
-
-const generateMockSlots = (date: string): Slot[] => [
-  { time: '08:00', available: true },
-  { time: '10:00', available: date.endsWith('2') ? false : true },
-  { time: '12:00', available: true },
-  { time: '14:00', available: true },
-  { time: '13:30', available: true },
-  { time: '13:45', available: true },
-  { time: '16:00', available: false },
-];
-
-const DAYS: DayAvailability[] = generateMockDays('09', '2025');
-const SLOTS: Record<string, Slot[]> = {};
-DAYS.forEach(d => SLOTS[d.date] = generateMockSlots(d.date));
-
+import { Injectable } from '@nestjs/common';
+import { DayAvailability, Slot } from '../interfaces/calendar.interfaces';
+import { SlotEntity } from './slot.entity';
+import { InjectRepository } from '@nestjs/typeorm';
+import { DataSource, Like, Repository } from 'typeorm';
+import { seedCalendar } from './seed-calendar';
 
 @Injectable()
 export class CalendarRepository {
-  getMonth(month: string, year: string): DayAvailability[] {
-    return DAYS.filter(day => {
-      const [y, m] = day.date.split('-');
-      return y === year && m === month.padStart(2, '0');
+  constructor(
+    @InjectRepository(SlotEntity)
+    private readonly repo: Repository<SlotEntity>,
+    private dataSource: DataSource,
+  ) {}
+
+  async getMonth(month: string, year: string): Promise<DayAvailability[]> {
+    const repo = this.dataSource.getRepository(SlotEntity);
+    await seedCalendar(repo, year, month);
+
+    const monthPrefix = `${year}-${month.padStart(2, '0')}`;
+
+    const slots = await this.repo.find({
+      where: { date: Like(`${monthPrefix}-%`) },
     });
+
+    const map = new Map<string, boolean>();
+
+    for (const slot of slots) {
+      if (!map.has(slot.date)) {
+        map.set(slot.date, false);
+      }
+      if (slot.available) {
+        map.set(slot.date, true);
+      }
+    }
+
+    const result: DayAvailability[] = Array.from(map.entries()).map(
+      ([date, available]) => ({
+        date,
+        available,
+      }),
+    );
+
+    result.sort((a, b) => a.date.localeCompare(b.date));
+
+    return result;
   }
-  getSlots(date: string): Slot[] {
-    return SLOTS[date] || [];
+
+  async getSlots(date: string): Promise<SlotEntity[]> {
+    return this.repo.find({ where: { date } });
   }
-  blockSlot(date:string, time:string):void{
-    const slots = SLOTS[date];
-    if(!slots) return;
-    const slot = slots.find(s => s.time == time);
-    if(slot) slot.available = false;
+
+  async blockSlot(date: string, time: string): Promise<void> {
+    const slot = await this.repo.findOne({ where: { date, time } });
+    if (slot) {
+      slot.available = false;
+      await this.repo.save(slot);
+    }
   }
 }

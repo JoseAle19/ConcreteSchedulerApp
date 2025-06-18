@@ -7,11 +7,11 @@ import { DayAvailability, Slot } from '../interfaces/calendar.interfaces';
 export class CalendarService {
   constructor(private readonly repo: CalendarRepository) { }
 
-  getMonthAvailability(month: string, year: string): DayAvailability[] {
+async  getMonthAvailability(month: string, year: string): Promise<DayAvailability[]> {
     return this.repo.getMonth(month, year);
   }
 
-  getDaySlots(date: string): Slot[] {
+ async getDaySlots(date: string): Promise<Slot[]> {
     return this.repo.getSlots(date);
   }
 }

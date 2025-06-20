@@ -1,6 +1,6 @@
 # ConcreteScheduler API (NestJS)
 
-API desarrollada en NestJS para gestionar reservas de entregas de concreto. Esta implementación forma parte de una prueba técnica y sigue una arquitectura **MVC**. Todos los datos se manejan **en memoria** usando mocks.
+API desarrollada en NestJS para gestionar reservas de entregas de concreto. Esta implementación forma parte de una prueba técnica y sigue una arquitectura **MVC**. Todos los datos se manejan **en memoria** usando mocks Update(se agrego SQLLite como base de datos).
 
 ---
 
@@ -30,7 +30,7 @@ src/
 
 ### 1. 📆 Calendario (`/calendar`)
 
-- Simula disponibilidad de **junio 2025**.
+- Simula disponibilidad de **Septiembre 2023**.
 - Cada día tiene franjas horarias (`08:00`, `10:00`, etc.).
 - Días y horarios están pre-cargados con lógica alternada de disponibilidad.
 
